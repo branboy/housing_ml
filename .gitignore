@@ -1,0 +1,29 @@
+__pycache__/
+*.pyc
+.env
+data/raw/
+outputs/models/
+.ipynb_checkpoints/
+# Data
+data/
+*.csv
+*.zip
+*.jpg
+*.png
+
+# Models
+models/
+*.pkl
+*.h5
+*.pt
+
+# Python
+__pycache__/
+*.pyc
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Env
+.env
+venv/

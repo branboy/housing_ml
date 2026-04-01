@@ -1,180 +1,65 @@
+import pandas as pd
+import json
 import os
 import joblib
-import numpy as np
-import pandas as pd
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, r2_score
-
-import xgboost as xgb
-
-
-# ======================================================
-# CONFIG
-# ======================================================
-
-DATA_PATH = "data/processed/dataset_c_cleaned.csv"
-MODEL_SAVE_PATH = "outputs/models/structured_xgb.pkl"
-
-RANDOM_STATE = 42
-TEST_SIZE = 0.15
-VAL_SIZE = 0.15
-
-
-# ======================================================
-# LOAD DATA
-# ======================================================
-
-print("Loading dataset...")
-df = pd.read_csv(DATA_PATH)
-
-print("Dataset shape:", df.shape)
-
-
-# ======================================================
-# TRAIN / VAL / TEST SPLIT (BEFORE ENCODING)
-# ======================================================
-
-train_df, temp_df = train_test_split(
-    df,
-    test_size=TEST_SIZE + VAL_SIZE,
-    random_state=RANDOM_STATE
-)
-
-val_ratio_adjusted = VAL_SIZE / (TEST_SIZE + VAL_SIZE)
-
-val_df, test_df = train_test_split(
-    temp_df,
-    test_size=1 - val_ratio_adjusted,
-    random_state=RANDOM_STATE
-)
-
-print("Train size:", len(train_df))
-print("Validation size:", len(val_df))
-print("Test size:", len(test_df))
-
-
-# ======================================================
-# TARGET ENCODING (TRAIN SET ONLY)
-# ======================================================
-
-print("Applying target encoding...")
-
-city_means = train_df.groupby("city")["log_price"].mean()
-
-def apply_target_encoding(df, city_map):
-    df = df.copy()
-    df["city_encoded"] = df["city"].map(city_map)
-    return df
-
-train_df = apply_target_encoding(train_df, city_means)
-val_df = apply_target_encoding(val_df, city_means)
-test_df = apply_target_encoding(test_df, city_means)
-
-# Handle unseen cities
-global_mean = train_df["log_price"].mean()
-
-train_df["city_encoded"].fillna(global_mean, inplace=True)
-val_df["city_encoded"].fillna(global_mean, inplace=True)
-test_df["city_encoded"].fillna(global_mean, inplace=True)
-
-
-# ======================================================
-# FEATURE SELECTION
-# ======================================================
-
-FEATURES = ["bed", "bath", "sqft", "city_encoded"]
-
-X_train = train_df[FEATURES]
-X_val = val_df[FEATURES]
-X_test = test_df[FEATURES]
-
-y_train = train_df["log_price"]
-y_val = val_df["log_price"]
-y_test = test_df["log_price"]
-
-
-# ======================================================
-# SCALING
-# ======================================================
-
-print("Scaling features...")
-
-scaler = StandardScaler()
-
-X_train_scaled = scaler.fit_transform(X_train)
-X_val_scaled = scaler.transform(X_val)
-X_test_scaled = scaler.transform(X_test)
-
-
-# ======================================================
-# MODEL INITIALIZATION
-# ======================================================
-
-print("Building XGBoost model...")
-
-model = xgb.XGBRegressor(
-    n_estimators=600,
-    learning_rate=0.05,
-    max_depth=6,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    random_state=RANDOM_STATE
+from src.models.structured_model import (
+    prepare_data,
+    split_data,
+    train_models,
+    evaluate_models,
+    select_best_model
 )
 
 
-# ======================================================
-# TRAINING
-# ======================================================
-
-print("Training model...")
-
-model.fit(
-    X_train_scaled,
-    y_train,
-    eval_set=[(X_val_scaled, y_val)],
-    verbose=True
-)
+# -----------------------------
+# PATHS
+# -----------------------------
+DATA_PATH = "data/processed/structured_b_clean.csv"
+MODEL_PATH = "outputs/models"
+LOG_PATH = "outputs/logs"
 
 
-# ======================================================
-# EVALUATION
-# ======================================================
-
-def evaluate(model, X, y, name="Dataset"):
-    preds = model.predict(X)
-    rmse = np.sqrt(mean_squared_error(y, preds))
-    r2 = r2_score(y, preds)
-
-    print(f"\n{name} Results:")
-    print(f"RMSE: {rmse:.4f}")
-    print(f"R²: {r2:.4f}")
-
-    return rmse, r2
+def ensure_dirs():
+    os.makedirs(MODEL_PATH, exist_ok=True)
+    os.makedirs(LOG_PATH, exist_ok=True)
 
 
-print("\nEvaluating model...")
+def main():
+    ensure_dirs()
 
-evaluate(model, X_train_scaled, y_train, "Train")
-evaluate(model, X_val_scaled, y_val, "Validation")
-evaluate(model, X_test_scaled, y_test, "Test")
+    print("Loading data...")
+    df = pd.read_csv(DATA_PATH)
+
+    print("Preparing data...")
+    X, y = prepare_data(df)
+
+    print("Splitting data...")
+    X_train, X_test, y_train, y_test = split_data(X, y)
+
+    print("Training models...")
+    models = train_models(X_train, y_train)
+
+    print("Evaluating models...")
+    results = evaluate_models(models, X_test, y_test)
+
+    print("\nModel Results:")
+    print(json.dumps(results, indent=2))
+
+    best_name, best_model = select_best_model(models, results)
+    print(f"\nBest Model: {best_name}")
+
+    print("Saving model...")
+    joblib.dump(best_model, f"{MODEL_PATH}/structured_model.pkl")
+
+    print("Saving metrics...")
+    with open(f"{LOG_PATH}/structured_metrics.json", "w") as f:
+        json.dump(results, f, indent=2)
+
+    print("\n✅ Training complete!")
 
 
-# ======================================================
-# SAVE MODEL ARTIFACTS
-# ======================================================
-
-print("Saving model artifacts...")
-
-os.makedirs(os.path.dirname(MODEL_SAVE_PATH), exist_ok=True)
-
-joblib.dump({
-    "model": model,
-    "scaler": scaler,
-    "city_encoding_map": city_means,
-    "global_mean": global_mean,
-    "features": FEATURES
-}, MODEL_SAVE_PATH)
-
-print("Structured model saved successfully.")
+if __name__ == "__main__":
+    main()

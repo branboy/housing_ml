@@ -1,82 +1,97 @@
 import numpy as np
-import torch
-from PIL import Image
-from torchvision import transforms
+import pandas as pd
 import joblib
-
-from src.models.cnn_model import ConditionCNN
-
-
-# Load models ONCE
-fusion_model = joblib.load("outputs/models/fusion_model.pkl")
-scaler = joblib.load("outputs/models/scaler.pkl")
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-cnn_model = ConditionCNN()
-state_dict = torch.load(
-    "outputs/models/cnn_model.pth",
-    map_location=device,
-    weights_only=True
-)
-cnn_model.load_state_dict(state_dict)
-cnn_model.to(device)
-cnn_model.eval()
+import torch
+from src.models.cnn_model import load_model, get_transform, extract_features
 
 
-# Image transform
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
+# -----------------------------
+# LOAD MODELS (once)
+# -----------------------------
+structured_model = joblib.load("outputs/models/structured_model.pkl")
+adjustment_model = joblib.load("outputs/models/image_adjustment_model.pkl")
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+cnn_model = load_model(device)
+transform = get_transform()
+
+
+# -----------------------------
+# STRUCTURED PREDICTION
+# -----------------------------
+def predict_structured(input_dict):
+    df = pd.DataFrame([input_dict])
+
+    X = df.copy()
+
+    # Encode city/state exactly like training
+    X = pd.get_dummies(X, columns=["city", "state"], drop_first=True)
+
+    # Align with training features
+    model_features = structured_model.feature_names_in_
+    X = X.reindex(columns=model_features, fill_value=0)
+
+    pred = structured_model.predict(X)[0]
+
+    return pred
+
+
+# -----------------------------
+# IMAGE ADJUSTMENT
+# -----------------------------
+def predict_adjustment(image_path, input_dict, structured_pred):
+    # Extract CNN features
+    features = extract_features(cnn_model, image_path, transform, device)
+
+    feature_df = pd.DataFrame([features])
+
+    # Add structured features
+    feature_df["bed"] = input_dict["bed"]
+    feature_df["bath"] = input_dict["bath"]
+    feature_df["sqft"] = input_dict["sqft"]
+    feature_df["city"] = input_dict["city"]
+
+    # 🚨 ADD THIS (CRITICAL)
+    feature_df["structured_pred"] = structured_pred
+
+    # Encode city
+    feature_df = pd.get_dummies(feature_df, columns=["city"], drop_first=True)
+
+    # Align columns
+    feature_df = feature_df.reindex(
+        columns=adjustment_model.feature_names_in_,
+        fill_value=0
     )
-])
+
+    adjustment = adjustment_model.predict(feature_df)[0]
+
+    print("Expected features:", len(adjustment_model.feature_names_in_))
+    print("Actual features:", feature_df.shape[1])
+
+    return adjustment
 
 
-def get_condition_score(image):
-    image = transform(image).unsqueeze(0).to(device)
+# -----------------------------
+# FINAL PREDICTION
+# -----------------------------
+def predict_price(input_dict, image_path=None):
+    
+    # Step 1: base prediction
+    structured_pred = predict_structured(input_dict)
 
-    with torch.no_grad():
-        score = cnn_model(image)
-
-    return score.cpu().numpy()[0][0]
-
-
-def preprocess_structured_input(user_input, df_columns):
-    """
-    user_input = dict from UI
-    df_columns = training columns (after encoding)
-    """
-
-    # Create empty vector
-    x = np.zeros(len(df_columns))
-
-    for i, col in enumerate(df_columns):
-        if col in user_input:
-            x[i] = user_input[col]
-
-    return x
-
-
-def predict_price(user_input, image, df_columns):
-    # Step 1: condition score
-    condition_score = get_condition_score(image)
-
-    # Step 2: structured features
-    structured_vector = preprocess_structured_input(user_input, df_columns)
+    # Step 2: optional image adjustment
+    if image_path:
+        adjustment = predict_adjustment(image_path, input_dict, structured_pred)
+    else:
+        adjustment = 0
 
     # Step 3: combine
-    X = np.hstack([structured_vector, condition_score]).reshape(1, -1)
+    final_log_price = structured_pred + adjustment
+    final_price = np.expm1(final_log_price)
 
-    # Step 4: scale
-    X = scaler.transform(X)
+    print("Structured (log):", structured_pred)
+    print("Adjustment:", adjustment)
+    print("Final log:", structured_pred + adjustment)
 
-    # Step 5: predict (log price)
-    log_price = fusion_model.predict(X)[0]
-
-    # Convert back
-    price = np.exp(log_price)
-
-    return price
+    return final_price

@@ -20,10 +20,3 @@ models/
 # Python
 __pycache__/
 *.pyc
-
-# Notebooks checkpoints
-.ipynb_checkpoints/
-
-# Env
-.env
-venv/

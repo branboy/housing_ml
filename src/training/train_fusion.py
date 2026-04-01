@@ -1,59 +1,72 @@
-import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-import numpy as np
-import pandas as pd
+import json
 import joblib
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from src.models.fusion_model import (
+    load_data,
+    load_structured_model,
+    add_structured_predictions,
+    create_residual_target,
+    prepare_data,
+    train_model,
+    evaluate
+)
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
-from src.models.fusion_model import build_fusion_model, evaluate_model
+# -----------------------------
+# PATHS
+# -----------------------------
+FUSION_PATH = "data/processed/fusion_dataset.csv"
+IMAGE_FEAT_PATH = "data/processed/image_features.csv"
+STRUCTURED_MODEL_PATH = "outputs/models/structured_model.pkl"
+
+MODEL_PATH = "outputs/models"
+LOG_PATH = "outputs/logs"
 
 
-def train_fusion_pipeline():
+def ensure_dirs():
+    os.makedirs(MODEL_PATH, exist_ok=True)
+    os.makedirs(LOG_PATH, exist_ok=True)
 
-    # Load data
-    df = pd.read_csv("data/processed/dataset_c_cleaned.csv")
-    condition_scores = np.load("data/processed/condition_scores.npy")
 
-    # Features
-    X_structured = df.drop(columns=["price", "log_price", "image_id", "street", "city"]).values
-    y = df["log_price"].values
+def main():
+    ensure_dirs()
 
-    X = np.hstack([X_structured, condition_scores])
+    # Load
+    df = load_data(FUSION_PATH, IMAGE_FEAT_PATH)
+    structured_model = load_structured_model(STRUCTURED_MODEL_PATH)
 
-    # Scale
-    scaler = StandardScaler()
-    X = scaler.fit_transform(X)
+    # Add structured predictions
+    df = add_structured_predictions(df, structured_model)
+
+    # Create residual target
+    df = create_residual_target(df)
+
+    # Prepare
+    X, y = prepare_data(df)
 
     # Split
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.30, random_state=42
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
     )
 
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.50, random_state=42
-    )
-
-    # Model
-    model = build_fusion_model()
-    model.fit(X_train, y_train)
+    # Train
+    model = train_model(X_train, y_train)
 
     # Evaluate
-    print("\nFusion Model Results:\n")
-    evaluate_model(model, X_train, y_train, "Train")
-    evaluate_model(model, X_val, y_val, "Validation")
-    evaluate_model(model, X_test, y_test, "Test")
+    metrics = evaluate(model, X_test, y_test)
 
-    # Save artifacts
-    os.makedirs("outputs/models", exist_ok=True)
+    print("Image Adjustment Model Metrics:")
+    print(json.dumps(metrics, indent=2))
 
-    joblib.dump(model, "outputs/models/fusion_model.pkl")
-    joblib.dump(scaler, "outputs/models/scaler.pkl")
+    # Save
+    joblib.dump(model, f"{MODEL_PATH}/image_adjustment_model.pkl")
 
-    print("\nModel and scaler saved successfully.")
+    with open(f"{LOG_PATH}/image_adjustment_metrics.json", "w") as f:
+        json.dump(metrics, f, indent=2)
 
 
 if __name__ == "__main__":
-    train_fusion_pipeline()
+    main()

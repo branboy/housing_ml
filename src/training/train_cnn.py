@@ -1,39 +1,111 @@
+import pandas as pd
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from src.models.cnn_model import ConditionCNN
-from src.data.image_processing import HousingImageDataset
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from PIL import Image
+from tqdm import tqdm
+
+from src.models.cnn_model import load_model, get_transform
 
 
-def train_cnn(df, image_dir, epochs=4, batch_size=32, lr=1e-4):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+# -----------------------------
+# PATHS
+# -----------------------------
+DATA_PATH = "data/processed/fusion_dataset.csv"
+OUTPUT_PATH = "data/processed/image_features.csv"
 
-    dataset = HousingImageDataset(df, image_dir)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+BATCH_SIZE = 32
 
-    model = ConditionCNN().to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
+# -----------------------------
+# LOAD IMAGES IN BATCH
+# -----------------------------
+def load_image_batch(image_paths, transform):
+    images = []
 
-    model.train()
+    for path in image_paths:
+        try:
+            img = Image.open(path).convert("RGB")
+            img = transform(img)
+            images.append(img)
+        except:
+            images.append(None)
 
-    for epoch in range(epochs):
-        total_loss = 0
+    # Filter out bad images
+    valid_images = [img for img in images if img is not None]
 
-        for images, targets in loader:
-            images = images.to(device)
-            targets = targets.to(device).unsqueeze(1)
+    if len(valid_images) == 0:
+        return None, []
 
-            preds = model(images)
-            loss = criterion(preds, targets)
+    batch_tensor = torch.stack(valid_images)
+    return batch_tensor, images
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
 
-            total_loss += loss.item()
+# -----------------------------
+# MAIN
+# -----------------------------
+def main():
+    df = pd.read_csv(DATA_PATH)
 
-        print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+    # DEVICE
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
-    return model
+    # MODEL + TRANSFORM
+    model = load_model(device)
+    transform = get_transform()
+
+    all_features = []
+    all_image_ids = []
+
+    print("Extracting features with batching...")
+
+    for i in tqdm(range(0, len(df), BATCH_SIZE)):
+        batch_df = df.iloc[i:i+BATCH_SIZE]
+
+        image_paths = batch_df["image_path"].tolist()
+        image_ids = batch_df["image_id"].tolist()
+
+        batch_images = []
+
+        valid_ids = []
+
+        # Load images
+        for path, img_id in zip(image_paths, image_ids):
+            try:
+                img = Image.open(path).convert("RGB")
+                img = transform(img)
+                batch_images.append(img)
+                valid_ids.append(img_id)
+            except:
+                continue
+
+        if len(batch_images) == 0:
+            continue
+
+        batch_tensor = torch.stack(batch_images).to(device)
+
+        with torch.no_grad():
+            features = model(batch_tensor)
+
+        # Flatten features
+        features = features.view(features.size(0), -1)
+        features = features.cpu().numpy()
+
+        all_features.extend(features)
+        all_image_ids.extend(valid_ids)
+
+    # Convert to DataFrame
+    feature_df = pd.DataFrame(all_features)
+    feature_df["image_id"] = all_image_ids
+
+    # Save
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    feature_df.to_csv(OUTPUT_PATH, index=False)
+
+    print("Saved image features!")
+
+
+if __name__ == "__main__":
+    main()

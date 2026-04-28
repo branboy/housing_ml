@@ -2,7 +2,6 @@ __pycache__/
 *.pyc
 .env
 data/raw/
-outputs/models/
 .ipynb_checkpoints/
 # Data
 data/
@@ -10,12 +9,7 @@ data/
 *.zip
 *.jpg
 *.png
-
-# Models (trained weights only — src/models/ Python source is committed)
-outputs/models/
-*.pkl
-*.h5
-*.pt
+*.json
 
 # Python
 __pycache__/

@@ -5,7 +5,9 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from PIL import Image
 from tqdm import tqdm
-
+from sklearn.decomposition import PCA
+import joblib
+from sklearn.model_selection import train_test_split
 from src.models.cnn_model import load_model, get_transform
 
 
@@ -96,16 +98,42 @@ def main():
         all_features.extend(features)
         all_image_ids.extend(valid_ids)
 
-    # Convert to DataFrame
-    feature_df = pd.DataFrame(all_features)
+    print("Applying PCA...")
+
+    # Build raw feature DataFrame — one row per image
+    feature_df = pd.DataFrame(all_features)          # columns: 0, 1, …, 2047
     feature_df["image_id"] = all_image_ids
 
-    # Save
+    # Fit PCA on training split only (prevent test-set leakage)
+    df_meta = pd.read_csv(DATA_PATH)
+    df_full = feature_df.merge(df_meta[["image_id"]], on="image_id")
+
+    train_ids, _ = train_test_split(df_full["image_id"], test_size=0.2, random_state=42)
+    train_mask   = feature_df["image_id"].isin(train_ids)
+
+    X_train_img = feature_df.loc[train_mask].drop(columns=["image_id"])
+
+    pca = PCA(n_components=200, random_state=42)
+    pca.fit(X_train_img)                             # fit on train only
+
+    print(f"PCA explained variance: {pca.explained_variance_ratio_.sum():.3f}")
+    joblib.dump(pca, "outputs/models/pca.pkl")
+
+    # Transform ALL rows (train + test) and save with named columns.
+    # Named columns ("pca_0"…"pca_199") ensure training and inference use the
+    # same feature space — previously the raw 2048-dim features were saved here
+    # but inference applied PCA first, causing a silent feature mismatch.
+    X_all = feature_df.drop(columns=["image_id"])
+    X_all_pca = pca.transform(X_all)
+
+    PCA_COLS = [f"pca_{i}" for i in range(pca.n_components_)]
+    pca_df = pd.DataFrame(X_all_pca, columns=PCA_COLS)
+    pca_df["image_id"] = feature_df["image_id"].values
+
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    feature_df.to_csv(OUTPUT_PATH, index=False)
+    pca_df.to_csv(OUTPUT_PATH, index=False)
 
-    print("Saved image features!")
-
+    print(f"Saved {pca.n_components_}-component PCA image features to {OUTPUT_PATH}")
 
 if __name__ == "__main__":
     main()

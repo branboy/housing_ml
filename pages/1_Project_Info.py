@@ -18,7 +18,7 @@ def load_file(path: str):
     p = Path(path)
     return p.read_bytes() if p.exists() else None
 
-paper_bytes  = load_file("misc/Project_report.pdf")
+paper_bytes  = load_file("misc/Project_Report.pdf")
 slides_bytes = load_file("misc/Project_presentation.pptx")
 zip_bytes    = load_file("housing_ml.zip")
 

@@ -148,10 +148,10 @@ with col2:
     if paper_bytes:
         st.download_button("📄 Paper (.pdf)", paper_bytes,
                            file_name="Project_Report.pdf",
-                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                           mime="application/pdf",
                            use_container_width=True)
     else:
-        st.warning("project_report.docx not found")
+        st.warning("Project_Report.pdf not found")
 
 with col3:
     if slides_bytes:

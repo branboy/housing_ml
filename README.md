@@ -1,93 +1,123 @@
-# Housing_ML
+# Multi-Signal Housing Price Prediction
 
+**XGBoost · RentCast AVM · CLIP Condition Scoring**
 
+Brantson Bui & Hanru Li — Machine Learning (ML 4824) · April 2026
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Project Webpage
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+The project webpage is built into the Streamlit app. Once the app is running, click **Project Info** in the sidebar to access the full project page — including paper and slides downloads, pipeline overview, results, and team info.
 
-## Add your files
+**Live deployment:** `https://YOUR_APP_NAME.streamlit.app` *(update once deployed)*
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+---
+
+## Running the App
+
+### 1. Prerequisites
+
+- Python 3.9 or higher
+- A RentCast API key (free tier at [rentcast.io](https://rentcast.io)) — needed for AVM enrichment. The app works without it but AVM will be disabled.
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> **GPU (optional but recommended):** If you have an NVIDIA GPU, install the CUDA-enabled version of PyTorch from [pytorch.org](https://pytorch.org/get-started/locally/) before running `pip install -r requirements.txt`. The CLIP scorer and XGBoost training will run significantly faster.
+
+### 3. Set your API key
+
+Create a file named `.env` in the project root with the following line:
 
 ```
-cd existing_repo
-git remote add origin https://git.cs.vt.edu/brantsonbui/housing_ml.git
-git branch -M main
-git push -uf origin main
+RENTCAST_API_KEY=your_key_here
 ```
 
-## Integrate with your tools
+If you skip this step the app will still run — AVM-based enrichment will simply be unavailable.
 
-* [Set up project integrations](https://git.cs.vt.edu/brantsonbui/housing_ml/-/settings/integrations)
+### 4. Launch the Streamlit app
 
-## Collaborate with your team
+```bash
+streamlit run app.py
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+The app will open automatically at `http://localhost:8501` in your browser.
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+## Folder Structure
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```
+housing_ml/
+├── app.py                      # Streamlit application entry point
+├── requirements.txt
+├── index.html                  # Project webpage (open in browser)
+├── configs/
+│   └── config.yaml
+├── data/
+│   ├── raw/
+│   │   ├── images/             # 15k CA training images
+│   │   ├── realty_images/      # 89 multi-state CLIP calibration images
+│   │   └── structured/         # Raw CSV data
+│   └── processed/
+│       ├── fusion_dataset.csv
+│       ├── realty_manifest.csv
+│       └── structured_clean.csv
+├── outputs/
+│   └── models/                 # Trained model files (.pkl, .json)
+├── src/
+│   ├── models/
+│   │   ├── clip_condition.py   # CLIP zero-shot condition scorer
+│   │   ├── fusion_model.py
+│   │   └── structured_model.py
+│   ├── training/
+│   │   ├── calibrate_clip.py   # Re-run CLIP calibration
+│   │   ├── train_structured.py
+│   │   └── train_fusion.py
+│   ├── inference/
+│   └── utils/
+└── notebooks/
+    ├── eda.ipynb
+    └── test.ipynb
+```
 
-***
+---
 
-# Editing this README
+## Re-training (optional)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+The `outputs/models/` folder already contains all trained model files — you do not need to retrain to run the app. If you want to retrain from scratch:
 
-## Suggestions for a good README
+```bash
+# 1. Train the structured XGBoost model
+python -m src.training.train_structured
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# 2. Re-run CLIP calibration (requires images in data/raw/realty_images/)
+python -m src.training.calibrate_clip
 
-## Name
-Choose a self-explaining name for your project.
+# 3. Train the fusion model
+python -m src.training.train_fusion
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+---
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## Deliverables
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+| File | Description |
+|------|-------------|
+| `app.py` | Streamlit app entry point (prediction tool) |
+| `pages/1_Project_Info.py` | Project webpage — accessible from the app sidebar |
+| `ieee_report.docx` | Final project report (IEEE double-column format) |
+| `Project_presentation.pptx` | Presentation slides |
+| `presentation_script.md` | Speaker notes for the presentation |
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+---
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Notes
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Do **not** rename or move the `data/` or `outputs/` folders — the app uses relative paths.
+- The first run will download ~600 MB of CLIP model weights and cache them locally. Subsequent runs use the cache.
+- The RentCast free tier allows 50 API calls/month. Results are cached in `outputs/rentcast_cache.json` so repeated lookups for the same address do not count against your quota.

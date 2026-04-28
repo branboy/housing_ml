@@ -7,8 +7,15 @@ xgboost
 torch
 torchvision
 opencv-python
+transformers
+Pillow
 shap
 tqdm
 tensorflow
 joblib
 streamlit
+category_encoders
+requests
+python-dotenv
+transformers
+Pillow

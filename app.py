@@ -129,13 +129,20 @@ if st.button("Estimate Price", type="primary", use_container_width=True):
                 # Run predict_worker in a child process.
                 # capture_output=True means ALL ML warnings go to result.stderr
                 # and never appear in Streamlit's terminal or crash its server.
+                project_root = os.path.dirname(os.path.abspath(__file__))
+                worker_env = os.environ.copy()
+                worker_env["PYTHONPATH"] = (
+                    project_root + os.pathsep + worker_env.get("PYTHONPATH", "")
+                )
+
                 result = subprocess.run(
                     [sys.executable, "-m", "src.inference.predict_worker"],
                     input=payload,
                     capture_output=True,
                     text=True,
                     timeout=300,
-                    cwd=os.path.dirname(os.path.abspath(__file__)),
+                    cwd=project_root,
+                    env=worker_env,
                 )
 
                 if not result.stdout.strip():
@@ -196,9 +203,4 @@ if pred:
         if pred.get("log_lines"):
             with st.expander("📊 Prediction breakdown", expanded=True):
                 st.text_area(
-                    label="breakdown",
-                    value="\n".join(pred["log_lines"]),
-                    height=340,
-                    disabled=True,
-                    label_visibility="collapsed",
-                )
+                    label="break

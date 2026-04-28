@@ -20,7 +20,6 @@ def load_file(path: str):
 
 paper_bytes  = load_file("misc/Project_Report.pdf")
 slides_bytes = load_file("misc/Project_presentation.pptx")
-zip_bytes    = load_file("housing_ml.zip")
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -135,14 +134,8 @@ st.markdown("""
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    if zip_bytes:
-        st.download_button("⬇️ Code (.zip)", zip_bytes,
-                           file_name="housing_ml.zip",
-                           mime="application/zip",
-                           use_container_width=True)
-    else:
-        st.link_button("💻 Code", "https://github.com/branboy/housing_ml",
-                       use_container_width=True)
+    st.link_button("💻 Code (.zip)", "https://github.com/branboy/housing_ml/releases/tag/code",
+                   use_container_width=True)
 
 with col2:
     if paper_bytes:
@@ -163,7 +156,8 @@ with col3:
         st.warning("Project_presentation.pptx not found")
 
 with col4:
-    st.page_link("app.py", label="🏠 Launch App", use_container_width=True)
+    st.link_button("🏠 Launch App", "https://mnlrmi5mk6yoinafs8fznf.streamlit.app/",
+                   use_container_width=True)
 
 st.divider()
 

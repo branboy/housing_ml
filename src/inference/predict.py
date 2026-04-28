@@ -5,9 +5,9 @@ import joblib
 from dotenv import load_dotenv
 load_dotenv()  # load RENTCAST_API_KEY (and others) from .env before any import that reads them
 
-from src.utils.structured_predict import predict_structured_from_row
-from src.utils.rentcast_client import enrich_property, get_avm_estimate, get_market_stats
-from src.utils.zillow_client import get_zillow_data
+from ..utils.structured_predict import predict_structured_from_row
+from ..utils.rentcast_client import enrich_property, get_avm_estimate, get_market_stats
+from ..utils.zillow_client import get_zillow_data
 
 
 # ------------------------------------
@@ -311,7 +311,7 @@ def predict_condition_adjustment(image_paths: list[str],
     per_image   : list of (filename, raw_score, log_adj)
         Per-photo details for the breakdown log.
     """
-    from src.models.clip_condition import score_image
+    from ..models.clip_condition import score_image
     from pathlib import Path
 
     per_image = []

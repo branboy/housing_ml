@@ -2,7 +2,7 @@ import warnings
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-from src.models.structured_model import prepare_data
+from ..models.structured_model import prepare_data
 
 # Silence XGBoost's C++ logger for the whole process.
 # The "Falling back to prediction using DMatrix due to mismatched devices" line

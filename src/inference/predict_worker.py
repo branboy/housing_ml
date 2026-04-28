@@ -44,7 +44,7 @@ import xgboost as xgb               # noqa: E402
 xgb.set_config(verbosity=0)
 
 # ── Main prediction import ────────────────────────────────────────────────────
-from src.inference.predict import predict_price  # noqa: E402
+from .predict import predict_price  # noqa: E402
 
 
 def main():

@@ -141,22 +141,22 @@ with col1:
                            mime="application/zip",
                            use_container_width=True)
     else:
-        st.link_button("💻 Code", "https://github.com/YOUR_USERNAME/housing-ml",
+        st.link_button("💻 Code", "https://github.com/branboy/housing-ml",
                        use_container_width=True)
 
 with col2:
     if paper_bytes:
-        st.download_button("📄 Paper (.docx)", paper_bytes,
-                           file_name="Multi_Signal_Housing_Price_Prediction.docx",
+        st.download_button("📄 Paper (.pdf)", paper_bytes,
+                           file_name="misc/Project_Report.pdf",
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            use_container_width=True)
     else:
-        st.warning("ieee_report.docx not found")
+        st.warning("project_report.docx not found")
 
 with col3:
     if slides_bytes:
         st.download_button("📊 Slides (.pptx)", slides_bytes,
-                           file_name="Multi_Signal_Housing_Price_Prediction_Slides.pptx",
+                           file_name="Project_presentation.pptx",
                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                            use_container_width=True)
     else:

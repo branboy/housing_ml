@@ -11,8 +11,8 @@ data/
 *.jpg
 *.png
 
-# Models
-models/
+# Models (trained weights only — src/models/ Python source is committed)
+outputs/models/
 *.pkl
 *.h5
 *.pt

@@ -95,7 +95,7 @@ if image_files:
             f.seek(0)
 
 # ── Predict button ─────────────────────────────────────────────────────────────
-if st.button("Estimate Price", type="primary", use_container_width=True):
+if st.button("Estimate Price", type="primary", width="stretch"):
 
     if not city or not state:
         st.error("City and State are required.")

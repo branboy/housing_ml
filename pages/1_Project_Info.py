@@ -135,14 +135,14 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.link_button("💻 Code (.zip)", "https://github.com/branboy/housing_ml/releases/tag/code",
-                   use_container_width=True)
+                   width="stretch")
 
 with col2:
     if paper_bytes:
         st.download_button("📄 Paper (.pdf)", paper_bytes,
                            file_name="Project_Report.pdf",
                            mime="application/pdf",
-                           use_container_width=True)
+                           width="stretch")
     else:
         st.warning("Project_Report.pdf not found")
 
@@ -151,13 +151,13 @@ with col3:
         st.download_button("📊 Slides (.pptx)", slides_bytes,
                            file_name="Project_presentation.pptx",
                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                           use_container_width=True)
+                           width="stretch")
     else:
         st.warning("Project_presentation.pptx not found")
 
 with col4:
     st.link_button("🏠 Launch App", "https://mnlrmi5mk6yoinafs8fznf.streamlit.app/",
-                   use_container_width=True)
+                   width="stretch")
 
 st.divider()
 
@@ -287,7 +287,7 @@ with r1:
             "n":           ["2,148", "2,145", "2,105", "2,047"],
         },
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
 with r2:
@@ -298,14 +298,14 @@ with r2:
         st.dataframe(
             {"State": ["Arizona", "Kansas", "Illinois", "Maryland", "Connecticut"],
              "MAPE":  ["28.8%", "31.1%", "31.4%", "32.6%", "33.4%"]},
-            hide_index=True, use_container_width=True,
+            hide_index=True, width="stretch",
         )
     with c2:
         st.caption("⚠️ Hardest")
         st.dataframe(
             {"State": ["California", "Hawaii", "Florida", "DC", "Maine"],
              "MAPE":  ["54.5%", "54.5%", "51.8%", "46.4%", "45.4%"]},
-            hide_index=True, use_container_width=True,
+            hide_index=True, width="stretch",
         )
 
 # Full pipeline callout
@@ -351,7 +351,7 @@ for i, (fname, caption) in enumerate(imgs):
     p = Path(fname)
     if p.exists():
         with cols[i % 2]:
-            st.image(str(p), caption=caption, use_container_width=True)
+            st.image(str(p), caption=caption, width="stretch")
 
 st.divider()
 

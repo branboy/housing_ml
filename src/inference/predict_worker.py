@@ -19,6 +19,13 @@ import os
 import warnings
 import logging
 
+# ── Ensure project root is on sys.path ───────────────────────────────────────
+# __file__ is  .../housing_ml/src/inference/predict_worker.py
+# project root is two levels up
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 # ── Silence everything before any ML import ──────────────────────────────────
 os.environ["TRANSFORMERS_NO_TF"]    = "1"
 os.environ["USE_TF"]                = "0"

@@ -18,8 +18,8 @@ def load_file(path: str):
     p = Path(path)
     return p.read_bytes() if p.exists() else None
 
-paper_bytes  = load_file("ieee_report.docx")
-slides_bytes = load_file("Project_presentation.pptx")
+paper_bytes  = load_file("misc/Project_report.pdf")
+slides_bytes = load_file("misc/Project_presentation.pptx")
 zip_bytes    = load_file("housing_ml.zip")
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
@@ -141,13 +141,13 @@ with col1:
                            mime="application/zip",
                            use_container_width=True)
     else:
-        st.link_button("💻 Code", "https://github.com/branboy/housing-ml",
+        st.link_button("💻 Code", "https://github.com/branboy/housing_ml",
                        use_container_width=True)
 
 with col2:
     if paper_bytes:
         st.download_button("📄 Paper (.pdf)", paper_bytes,
-                           file_name="misc/Project_Report.pdf",
+                           file_name="Project_Report.pdf",
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            use_container_width=True)
     else:

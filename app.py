@@ -202,4 +202,10 @@ if pred:
         # Prediction breakdown — plain text_area avoids StreamlitSyntaxHighlighter.js
         if pred.get("log_lines"):
             with st.expander("📊 Prediction breakdown", expanded=True):
-                st.text_area(label="break")
+                st.text_area(
+                    label="breakdown",
+                    value="\n".join(pred["log_lines"]),
+                    height=300,
+                    disabled=True,
+                    label_visibility="collapsed",
+                )

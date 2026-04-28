@@ -6,16 +6,13 @@ scikit-learn
 xgboost
 torch
 torchvision
-opencv-python
+opencv-python-headless
 transformers
 Pillow
 shap
 tqdm
-tensorflow
 joblib
 streamlit
 category_encoders
 requests
 python-dotenv
-transformers
-Pillow
